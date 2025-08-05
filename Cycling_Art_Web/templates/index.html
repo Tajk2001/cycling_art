@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cycling Art - FIT File Processor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+            color: #1e293b;
+            line-height: 1.6;
+            min-height: 100vh;
+            font-weight: 300;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 0;
+        }
+
+        .header h1 {
+            font-size: calc(2.5rem * 1.618);
+            font-weight: 200;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+
+        .header p {
+            font-size: calc(1.1rem * 1.618);
+            color: #64748b;
+            margin-bottom: 2rem;
+            font-weight: 300;
+        }
+
+        .upload-section {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-upload {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-wrapper label {
+            display: inline-block;
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 400;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 16px;
+            letter-spacing: 0.01em;
+        }
+
+        .file-input-wrapper label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(100, 116, 139, 0.3);
+        }
+
+        #fileName {
+            color: #475569;
+            font-weight: 400;
+            font-size: 14px;
+        }
+
+        .upload-btn {
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 400;
+            transition: all 0.3s ease;
+            letter-spacing: 0.01em;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+        }
+
+        .upload-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-section {
+            display: none;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-section h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #475569;
+            font-weight: 300;
+            font-size: calc(1.5rem * 1.618);
+            letter-spacing: -0.01em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-value {
+            font-size: calc(2rem * 1.618);
+            font-weight: 200;
+            color: #3b82f6;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .stat-label {
+            font-size: calc(0.9rem * 1.618);
+            color: #64748b;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+        }
+
+        .chart-title {
+            font-size: calc(1.2rem * 1.618);
+            font-weight: 400;
+            color: #475569;
+            margin-bottom: 1rem;
+            text-align: center;
+            letter-spacing: -0.01em;
+        }
+
+        .chart-image {
+            width: 100%;
+            max-height: 700px;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .animated-dashboard {
+            grid-column: 1 / -1;
+        }
+
+        .animated-dashboard .chart-image {
+            max-height: 700px;
+            object-fit: contain;
+        }
+
+        .download-section {
+            text-align: center;
+        }
+
+        .download-btn {
+            display: inline-block;
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 400;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            letter-spacing: 0.01em;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Cycling Art</h1>
+            <p>Transform your cycling data into beautiful animated visualizations</p>
+        </div>
+        
+        <div class="upload-section">
+            <div class="file-upload">
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" accept=".fit" onchange="updateFileName()">
+                    <label for="fileInput">Choose FIT File</label>
+                </div>
+                <div id="fileName" style="color: #475569; font-weight: 400;"></div>
+                <button class="upload-btn" onclick="uploadFile()" id="uploadBtn">Process Ride Data</button>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>Processing your ride data...</p>
+        </div>
+        
+        <div class="results-section" id="results">
+            <h2>Ride Analysis Results</h2>
+            
+            <div class="stats-grid" id="statsGrid"></div>
+            
+            <div class="charts-section">
+                <div class="chart-container animated-dashboard">
+                    <div class="chart-title">Animated Dashboard</div>
+                    <img id="animatedDashboard" class="chart-image" alt="Animated Dashboard">
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">Elevation Profile</div>
+                    <img id="elevationChart" class="chart-image" alt="Elevation Profile">
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">Route Map</div>
+                    <img id="routeMap" class="chart-image" alt="Route Map">
+                </div>
+            </div>
+            
+            <div class="download-section">
+                <a href="#" id="downloadLink" class="download-btn">Download CSV Data</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateFileName() {
+            const fileInput = document.getElementById('fileInput');
+            const fileName = document.getElementById('fileName');
+            
+            if (fileInput.files.length > 0) {
+                fileName.textContent = fileInput.files[0].name;
+            } else {
+                fileName.textContent = '';
+            }
+        }
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            
+            if (!fileInput.files.length) {
+                showError('Please select a file first.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Processing...';
+            loading.style.display = 'block';
+            results.style.display = 'none';
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResults(data);
+                } else {
+                    showError(data.error || 'An error occurred while processing the file.');
+                }
+            } catch (error) {
+                showError('Network error. Please try again.');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Process Ride Data';
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayResults(data) {
+            const statsGrid = document.getElementById('statsGrid');
+            
+            statsGrid.innerHTML = '';
+            
+            const keyStats = [
+                { label: 'Distance', value: `${data.stats.total_distance ? data.stats.total_distance.toFixed(1) : 'N/A'} km` },
+                { label: 'Elevation Gain', value: `${data.stats.altitude_max ? (data.stats.altitude_max - data.stats.altitude_min).toFixed(0) : 'N/A'} m` },
+                { label: 'Max Elevation', value: `${data.stats.altitude_max ? data.stats.altitude_max.toFixed(0) : 'N/A'} m` },
+                { label: 'Data Points', value: `${data.stats.total_points ? data.stats.total_points.toLocaleString() : 'N/A'}` }
+            ];
+            
+            keyStats.forEach(stat => {
+                const statCard = document.createElement('div');
+                statCard.className = 'stat-card';
+                statCard.innerHTML = `
+                    <div class="stat-value">${stat.value}</div>
+                    <div class="stat-label">${stat.label}</div>
+                `;
+                statsGrid.appendChild(statCard);
+            });
+            
+            if (data.animated_dashboard) {
+                document.getElementById('animatedDashboard').src = `data:image/gif;base64,${data.animated_dashboard}`;
+            }
+            
+            if (data.elevation_plot) {
+                document.getElementById('elevationChart').src = `data:image/png;base64,${data.elevation_plot}`;
+            }
+            
+            if (data.route_map) {
+                document.getElementById('routeMap').src = `data:image/png;base64,${data.route_map}`;
+            }
+            
+            if (data.csv_file) {
+                const downloadLink = document.getElementById('downloadLink');
+                downloadLink.href = `/download/${data.csv_file}`;
+                downloadLink.download = data.csv_file;
+            }
+            
+            results.style.display = 'block';
+            results.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            
+            const container = document.querySelector('.container');
+            container.insertBefore(errorDiv, container.firstChild);
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+</html> 
