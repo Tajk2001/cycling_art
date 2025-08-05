@@ -8,8 +8,6 @@ import os
 from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
-from matplotlib.path import Path
-from matplotlib.markers import MarkerStyle
 
 # --- FIT Parser ---
 def parse_fit_file(file_path: str) -> pd.DataFrame:
@@ -173,30 +171,6 @@ def create_animated_dashboard(df: pd.DataFrame):
     max_elev_idx = y_coords.values.argmax()
     max_elev_x = x_coords[max_elev_idx]
     max_elev_y = y_coords.iloc[max_elev_idx]
-
-    # Define a KOM-style mountain shape as a custom marker (three peaks, center tallest)
-    kom_vertices = [
-        (-0.6, -1),    # left base
-        (-0.35, 0.2),  # left peak
-        (-0.15, -0.3), # left valley
-        (0.0, 0.8),    # center (tallest) peak
-        (0.15, -0.3),  # right valley
-        (0.35, 0.4),   # right peak
-        (0.6, -1),     # right base
-        (-0.6, -1)     # close path
-    ]
-    kom_codes = [
-        Path.MOVETO,
-        Path.LINETO,
-        Path.LINETO,
-        Path.LINETO,
-        Path.LINETO,
-        Path.LINETO,
-        Path.LINETO,
-        Path.CLOSEPOLY
-    ]
-    kom_path = Path(kom_vertices, kom_codes)
-    kom_marker = MarkerStyle(kom_path)
     
     # Set fixed axis limits for consistent scaling
     x_min, x_max = 0, 100
