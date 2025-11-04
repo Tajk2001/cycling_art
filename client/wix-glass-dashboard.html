@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Glassmorphic Cycling Dashboard</title>
+<style>
+  :root{
+    --bg:#0b1220;
+    --panel:rgba(17,25,40,.55);
+    --border:rgba(255,255,255,.08);
+    --text:#e2e8f0;
+    --muted:#94a3b8;
+    --accent:#6ee7ff;
+    --accent2:#a78bfa;
+    --glow:rgba(110,231,255,.45);
+  }
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text); font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica Neue,Arial;
+    background:
+      radial-gradient(900px 500px at 90% 100%, rgba(167,139,250,.09), transparent 60%),
+      radial-gradient(1000px 600px at 10% 0%, rgba(110,231,255,.08), transparent 60%),
+      linear-gradient(180deg, #0b1220, #0a0f1a);
+    display:flex; align-items:flex-start; justify-content:center; padding:24px;
+  }
+  .wrap{width:min(1100px, 100%); display:grid; gap:16px}
+  .title{
+    margin:0 0 4px; font-size:24px; font-weight:700;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 0 18px var(--glow);
+  }
+  .subtitle{margin:0 0 8px; color:var(--muted)}
+  .grid{display:grid; gap:16px; grid-template-columns: repeat(12, 1fr);} 
+  .glass{
+    background: var(--panel);
+    border:1px solid var(--border);
+    border-radius:16px;
+    backdrop-filter: blur(14px) saturate(120%);
+    -webkit-backdrop-filter: blur(14px) saturate(120%);
+    box-shadow: 0 30px 60px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.03), 0 0 28px -6px var(--glow);
+  }
+  .upload{grid-column:1 / -1; padding:16px; display:flex; gap:16px; align-items:center; flex-wrap:wrap;}
+  .drop{
+    flex:1 1 340px; min-height:120px; display:flex; align-items:center; justify-content:center; text-align:center; padding:18px;
+    border:1px dashed var(--border); border-radius:14px; color:var(--muted); transition:border-color .2s, background .2s;
+  }
+  .drop.dragover{ border-color: var(--accent); background: rgba(110,231,255,.06); }
+  .btn{
+    appearance:none; border:1px solid var(--border); color:var(--text); background: rgba(255,255,255,.04);
+    padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.02), 0 10px 30px rgba(0,0,0,.25);
+    transition: transform .05s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  .btn:hover{ border-color: rgba(255,255,255,.18); box-shadow:0 18px 45px rgba(0,0,0,.35), 0 0 20px -6px var(--glow); }
+  .btn:active{ transform: translateY(1px); }
+  input[type=file]{ display:none; }
+  .stat{ grid-column: span 3; padding:16px; display:flex; flex-direction:column; gap:10px; min-height:120px; }
+  @media (max-width: 900px){ .stat{ grid-column: span 6; } }
+  @media (max-width: 560px){ .stat{ grid-column: span 12; } }
+  .label{ color:var(--muted); font-weight:600; letter-spacing:.02em;}
+  .val{
+    font-size:28px; font-weight:800;
+    background: linear-gradient(90deg, #e2e8f0, #cbd5e1);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 0 24px rgba(226,232,240,.08);
+  }
+  .unit{ color:var(--muted); font-size:12px; }
+  .row{ display:flex; align-items:baseline; gap:8px; }
+  .loading{ display:none; align-items:center; gap:10px; color:var(--muted); }
+  .loading.show{ display:flex; }
+  .spinner{ width:16px; height:16px; border-radius:50%; border:2px solid rgba(255,255,255,.16); border-top-color: var(--accent); animation: spin .9s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .error{ display:none; color:#fecaca; background: rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.25); padding:10px 12px; border-radius:12px;}
+  .error.show{ display:block; }
+  .panel{ grid-column:1 / -1; padding:16px; display:grid; gap:12px; grid-template-columns: repeat(12,1fr); }
+  .kpi{ grid-column: span 4; padding:14px; border-radius:12px; border:1px solid var(--border); background: rgba(255,255,255,.02);} 
+  @media (max-width: 900px){ .kpi{ grid-column: span 6; } }
+  @media (max-width: 560px){ .kpi{ grid-column: span 12; } }
+  .kpi .val{ font-size:22px; }
+  .muted{ color:var(--muted); }
+  .tiny{ font-size:12px; }
+  /* End styles */
+  </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1 class="title">Cycling Glass Dashboard</h1>
+      <p class="subtitle">Upload a .fit file — data renders in glass panels.</p>
+
+      <div class="glass upload">
+        <label class="btn" for="file">Choose .fit file</label>
+        <input id="file" type="file" accept=".fit" />
+        <button class="btn" id="demoBtn" title="Uses a small internal mock">Try demo</button>
+        <div class="drop" id="drop">or drop a .fit file here</div>
+        <div class="loading" id="loading"><div class="spinner"></div> Processing…</div>
+        <div class="error" id="error"></div>
+      </div>
+
+      <div class="grid" id="statsGrid">
+        <div class="glass stat">
+          <div class="label">Distance</div>
+          <div class="row"><div class="val" id="distance">—</div><div class="unit">km</div></div>
+          <div class="muted tiny" id="distanceNote">Haversine, outliers filtered</div>
+        </div>
+
+        <div class="glass stat">
+          <div class="label">Duration</div>
+          <div class="row"><div class="val" id="duration">—</div><div class="unit"></div></div>
+          <div class="muted tiny" id="durationNote">From timestamps if available</div>
+        </div>
+
+        <div class="glass stat">
+          <div class="label">Avg Speed</div>
+          <div class="row"><div class="val" id="avgSpeed">—</div><div class="unit">km/h</div></div>
+          <div class="muted tiny">Distance / moving time</div>
+        </div>
+
+        <div class="glass stat">
+          <div class="label">Elev. Gain</div>
+          <div class="row"><div class="val" id="elevGain">—</div><div class="unit">m</div></div>
+          <div class="muted tiny">Positive altitude deltas</div>
+        </div>
+
+        <div class="glass stat">
+          <div class="label">Avg Power</div>
+          <div class="row"><div class="val" id="avgPower">—</div><div class="unit">W</div></div>
+          <div class="muted tiny">From power array</div>
+        </div>
+
+        <div class="glass stat">
+          <div class="label">Avg Cadence</div>
+          <div class="row"><div class="val" id="avgCadence">—</div><div class="unit">rpm</div></div>
+          <div class="muted tiny">From cadence array</div>
+        </div>
+
+        <div class="glass stat">
+          <div class="label">Avg Heart Rate</div>
+          <div class="row"><div class="val" id="avgHr">—</div><div class="unit">bpm</div></div>
+          <div class="muted tiny">From heart_rate array</div>
+        </div>
+
+        <div class="glass stat">
+          <div class="label">Points</div>
+          <div class="row"><div class="val" id="totalPoints">—</div><div class="unit"></div></div>
+          <div class="muted tiny">Samples after cleaning</div>
+        </div>
+      </div>
+
+      <div class="glass panel">
+        <div class="kpi">
+          <div class="label">File</div>
+          <div class="val" id="fileName">—</div>
+          <div class="muted tiny" id="fileSize"></div>
+        </div>
+        <div class="kpi">
+          <div class="label">Time Range</div>
+          <div class="val" id="timeRange">—</div>
+          <div class="muted tiny" id="timeSpan"></div>
+        </div>
+        <div class="kpi">
+          <div class="label">API Status</div>
+          <div class="val" id="apiStatus">—</div>
+          <div class="muted tiny">CORS must be enabled</div>
+        </div>
+      </div>
+    </div>
+
+<script>
+  // Privacy + logging controls
+  const PRIVACY_MODE = true;   // masks file names and hides exact time range
+  const DEBUG = false;         // disable verbose console logs by default
+
+  // Set your HTTPS endpoint for the Render API here
+  // Replace the placeholder below with your actual URL, e.g.
+  //   https://your-render-service.onrender.com/api/parse-fit
+  const API_URL = 'https://your-render-app.onrender.com/api/parse-fit';
+
+  const fileInput = document.getElementById('file');
+  const dropZone  = document.getElementById('drop');
+  const loadingEl = document.getElementById('loading');
+  const errorEl   = document.getElementById('error');
+  const demoBtn   = document.getElementById('demoBtn');
+  const el = id => document.getElementById(id);
+
+  const fmt   = n => Number.isFinite(n) ? n.toFixed(1) : '—';
+  const fmt0  = n => Number.isFinite(n) ? Math.round(n).toString() : '—';
+  function fmtHMS(seconds){
+    if(!Number.isFinite(seconds)) return '—';
+    const h = Math.floor(seconds/3600), m = Math.floor((seconds%3600)/60), s = Math.floor(seconds%60);
+    return [h,m,s].map(v => String(v).padStart(2,'0')).join(':');
+  }
+  function haversine(lat1, lon1, lat2, lon2){
+    const toRad = x => x*Math.PI/180, R = 6371;
+    const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+    return R*2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+  const clean = arr => (Array.isArray(arr) ? arr.filter(v => v!==null && v!==undefined && Number.isFinite(+v)).map(Number) : []);
+  const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : NaN;
+  const posDeltaSum = arr => { if(arr.length<2) return NaN; let s=0; for(let i=1;i<arr.length;i++){ const d=arr[i]-arr[i-1]; if(d>0) s+=d; } return s; };
+  function computeDistance(lat, lon){
+    const L = Math.min(lat.length, lon.length); if(L<2) return NaN;
+    let total = 0; for(let i=1;i<L;i++){ const d = haversine(lat[i-1], lon[i-1], lat[i], lon[i]); if(d<1.0) total += d; }
+    return total;
+  }
+  function parseTimestamps(ts){
+    const arr = clean(ts).map(v => new Date(v));
+    if(!arr.length || isNaN(arr[0])) return {start:null, end:null, elapsed:null};
+    const start = arr[0], end = arr[arr.length-1];
+    return { start, end, elapsed:(end-start)/1000 };
+  }
+
+  function renderInfo({file, stats, data}){
+    // Mask potentially identifying file names
+    const fileLabel = file ? (PRIVACY_MODE ? 'Uploaded FIT' : (file.name || '—')) : '—';
+    el('fileName').textContent = fileLabel;
+    el('fileSize').textContent = file?.size ? `${(file.size/1024/1024).toFixed(2)} MB` : '';
+
+    const lat     = clean(data.latitude || data.lat || []);
+    const lon     = clean(data.longitude || data.lon || []);
+    const altitude= clean(data.altitude || data.elevation || []);
+    const speed   = clean(data.speed || []);
+    const power   = clean(data.power || data.watts || []);
+    const cadence = clean(data.cadence || []);
+    const hr      = clean(data.heart_rate || data.hr || []);
+
+    let totalDistanceKm = Number.isFinite(stats?.total_distance) ? stats.total_distance : computeDistance(lat, lon);
+    let elevGainM       = Number.isFinite(stats?.elevation_gain) ? stats.elevation_gain : posDeltaSum(altitude);
+    const ts = parseTimestamps(data.timestamp || data.time || []);
+
+    const movingTime = (() => {
+      if (speed.length && ts.elapsed) {
+        const threshold = 1.0; // ~1 m/s
+        const movingSamples = speed.filter(v => v > threshold).length;
+        return ts.elapsed * (movingSamples / speed.length);
+      }
+      return ts.elapsed;
+    })();
+
+    const avgSpeed = (Number.isFinite(totalDistanceKm) && Number.isFinite(movingTime) && movingTime>0)
+      ? (totalDistanceKm / (movingTime/3600))
+      : NaN;
+
+    el('distance').textContent  = fmt(totalDistanceKm);
+    el('elevGain').textContent  = fmt0(elevGainM);
+    el('duration').textContent  = fmtHMS(ts.elapsed);
+    el('avgSpeed').textContent  = fmt(avgSpeed);
+    el('avgPower').textContent  = power.length ? fmt0(avg(power)) : '—';
+    el('avgCadence').textContent= cadence.length ? fmt0(avg(cadence)) : '—';
+    el('avgHr').textContent     = hr.length ? fmt0(avg(hr)) : '—';
+    el('totalPoints').textContent = Object.values(data).reduce((m,arr)=> Math.max(m, Array.isArray(arr)?arr.length:0), 0);
+
+    const range = (ts.start && ts.end) ? `${ts.start.toLocaleString()} → ${ts.end.toLocaleString()}` : '—';
+    el('timeRange').textContent = PRIVACY_MODE ? 'Hidden' : range;
+    el('timeSpan').textContent  = ts.elapsed ? `${fmt(ts.elapsed/60)} min total` : '';
+    el('apiStatus').textContent = 'OK';
+  }
+
+  function setLoading(v){ loadingEl.classList.toggle('show', !!v); }
+  function setError(msg){ if(msg){ errorEl.textContent=msg; errorEl.classList.add('show'); } else { errorEl.textContent=''; errorEl.classList.remove('show'); } }
+
+  async function processFile(file){
+    setError(null); setLoading(true);
+    try{
+      if(!file || !file.name.toLowerCase().endsWith('.fit')) throw new Error('Please choose a .fit file.');
+      const fd = new FormData(); fd.append('file', file);
+      if(DEBUG) console.log('Uploading to', API_URL, 'size(bytes)=', file.size);
+      const res = await fetch(API_URL, { method:'POST', body: fd, mode:'cors' });
+      if(DEBUG) console.log('Response status', res.status);
+      if(!res.ok) throw new Error(`API error: ${res.status}`);
+      const json = await res.json();
+      if(DEBUG) console.log('Response JSON keys:', Object.keys(json));
+      if(json.success === false) throw new Error(json.error || 'Processing failed');
+      renderInfo({ file, data: json.data || json, stats: json.stats || {} });
+    }catch(err){
+      if(DEBUG) console.error('Upload/process error:', err);
+      setError(err.message || 'Something went wrong');
+      el('apiStatus').textContent = 'ERROR';
+    }finally{
+      setLoading(false);
+    }
+  }
+
+  const demo = {
+    data:{
+      // Synthetic, non-location-specific sample series
+      latitude:[0.0000,0.0003,0.0008,0.0012,0.0017,0.0021],
+      longitude:[0.0000,0.0002,0.0006,0.0010,0.0013,0.0017],
+      altitude:[10,12,14,16,17,19],
+      speed:[2.1,3.2,4.1,3.5,3.9,4.2],
+      power:[180,210,230,200,220,240],
+      cadence:[82,86,90,88,85,92],
+      heart_rate:[128,133,138,141,139,144],
+      timestamp:[
+        '2000-01-01T00:00:00Z','2000-01-01T00:00:05Z','2000-01-01T00:00:10Z',
+        '2000-01-01T00:00:15Z','2000-01-01T00:00:20Z','2000-01-01T00:00:25Z'
+      ]
+    },
+    stats:{}
+  };
+
+  fileInput.addEventListener('change', e => {
+    const f = e.target.files?.[0]; if(f) processFile(f);
+  });
+  ['dragenter','dragover'].forEach(ev => dropZone.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); dropZone.classList.add('dragover');
+  }));
+  ['dragleave','drop'].forEach(ev => dropZone.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('dragover');
+  }));
+  dropZone.addEventListener('drop', e => {
+    const f = e.dataTransfer?.files?.[0]; if(f) processFile(f);
+  });
+  document.getElementById('demoBtn').addEventListener('click', () => {
+    renderInfo({ file:{name:'demo.fit', size: 1024*64}, ...demo });
+    el('apiStatus').textContent='DEMO';
+  });
+</script>
+</body>
+</html>
